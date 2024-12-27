@@ -53,7 +53,7 @@ async function handleRequest(request) {
   const [prefix, rest] = extractPrefixAndRest(pathname, Object.keys(apiMapping));
   if (prefix) {
     const baseApiUrl = apiMapping[prefix];
-    const targetUrl = `${baseApiUrl}${rest}`;
+    const targetUrl = new URL(`${baseApiUrl}${rest}`);
     queryParams.forEach((value, key) => targetUrl.searchParams.append(key, value));
 
     try {
@@ -64,7 +64,9 @@ async function handleRequest(request) {
       });
 
       const response = await fetch(newRequest);
-      return response;
+      const modifiedResponse = new Response(response.body, response);
+      ['Access-Control-Allow-Origin', 'Access-Control-Allow-Methods', 'Access-Control-Allow-Headers'].forEach(header => modifiedResponse.headers.set(header, '*'));
+      return modifiedResponse;
     } catch (error) {
       console.error('Failed to fetch:', error);
       return new Response('Internal Server Error', { status: 500 });

@@ -6,6 +6,10 @@
 <p>Serverless API Proxy: Multi-API Proxy Gateway Based on Vercel Routes, Cloudflare Workers, and Netlify Redirects</p>
 </div>
 
+## Notice
+
+**Due to login restrictions on the original account([lopins](https://github.com/lopins)), I'm now using this account([lopinx](https://github.com/lopinx)) for maintenance purposes.**
+
 ## Support
 
 - openai

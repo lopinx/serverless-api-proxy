@@ -6,6 +6,10 @@
 <p>Serverless API Proxy: 基于Vercel Routes、Cloudflare Worker、Netlify Redirects的多API代理网关</p>
 </div>
 
+## 特别提示
+
+**原账号（[lopins](https://github.com/lopins)）由于被限制登录，现在使用本账号（[lopinx](https://github.com/lopinx)）维护**
+
 ## 支持服务
 
 - openai
