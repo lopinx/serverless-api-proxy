@@ -1,3 +1,4 @@
 .vercel
+.wrangler
 node_modules/
 package-lock.json

@@ -3,8 +3,12 @@
     "version": "1.0.0",
     "description": "Multi-API Proxy Gateway Based on Vercel Routes, Cloudflare Workers, and Netlify Redirects",
     "scripts": {
-      "build": "echo 'No build step required.'"
+        "build": "echo 'No build step required.'",
+        "test": "echo 'No test step required.'"
     },
-    "author": "https://github.com/lopins",
-    "license": "MIT"
-  }
+    "author": "https://github.com/lopinx",
+    "license": "MIT",
+    "devDependencies": {
+        "wrangler": "^3.99.0"
+    }
+}

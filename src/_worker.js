@@ -4,82 +4,109 @@ addEventListener('fetch', event => {
 
 async function handleRequest(request) {
   const url = new URL(request.url);
-  const queryParams = url.searchParams;
   const pathname = url.pathname;
 
-  if (pathname === '/' || pathname === '/index.html') {
-    return new Response('service is running!', {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html'
-      }
-    });
-  } 
-  if(pathname === '/favicon.ico') {
-    return new Response('', {
-      status: 200,
-      headers: {
-        'Content-Type': 'image/png'
-      }
-    });
-  }
-  if(pathname === '/robots.txt') {
-    return new Response('User-agent: *\nDisallow: /', {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/plain'
-      }
-    });
+  // Define CORS headers
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': '*',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Credentials': 'true'
+  };
+
+  // Define static responses
+  const staticResponses = new Map([
+    ['/', { content: 'service is running!', type: 'text/html' }],
+    ['/index.html', { content: 'service is running!', type: 'text/html' }],
+    ['/favicon.ico', { content: '', type: 'image/png' }],
+    ['/robots.txt', { content: 'User-agent: *\nDisallow: /', type: 'text/plain' }]
+  ]);
+
+  // Define API endpoints
+  const apis = new Map([
+    ['/discord', 'https://discord.com/api'],
+    ['/telegram', 'https://api.telegram.org'],
+    ['/openai', 'https://api.openai.com'],
+    ['/claude', 'https://api.anthropic.com'],
+    ['/gemini', 'https://generativelanguage.googleapis.com'],
+    ['/meta', 'https://www.meta.ai/api'],
+    ['/groq', 'https://api.groq.com'],
+    ['/x', 'https://api.x.ai'],
+    ['/cohere', 'https://api.cohere.ai'],
+    ['/huggingface', 'https://api-inference.huggingface.co'],
+    ['/together', 'https://api.together.xyz'],
+    ['/novita', 'https://api.novita.ai'],
+    ['/portkey', 'https://api.portkey.ai'],
+    ['/fireworks', 'https://api.fireworks.ai'],
+    ['/openrouter', 'https://openrouter.ai/api']
+  ]);
+
+  // Handle root static response
+  if (staticResponses.has(pathname)) {
+    const { content, type } = staticResponses.get(pathname);
+    return new Response(content, { status: 200, headers: { 'Content-Type': type } });
   }
 
-  const apiMapping = {
-    '/discord': 'https://discord.com/api',
-    '/telegram': 'https://api.telegram.org',
-    '/openai': 'https://api.openai.com',
-    '/claude': 'https://api.anthropic.com',
-    '/gemini': 'https://generativelanguage.googleapis.com',
-    '/meta': 'https://www.meta.ai/api',
-    '/groq': 'https://api.groq.com',
-    '/x': 'https://api.x.ai',
-    '/cohere': 'https://api.cohere.ai',
-    '/huggingface': 'https://api-inference.huggingface.co',
-    '/together': 'https://api.together.xyz',
-    '/novita': 'https://api.novita.ai',
-    '/portkey': 'https://api.portkey.ai',
-    '/fireworks': 'https://api.fireworks.ai',
-    '/openrouter': 'https://openrouter.ai/api'
-  }
-  
-  const [prefix, rest] = extractPrefixAndRest(pathname, Object.keys(apiMapping));
+  // Handle OPTIONS request for CORS preflight
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
+
+  // Handle API proxying
+  const [prefix, rest] = getApiInfo(pathname, apis);
   if (prefix) {
-    const baseApiUrl = apiMapping[prefix];
-    const targetUrl = new URL(`${baseApiUrl}${rest}`);
-    queryParams.forEach((value, key) => targetUrl.searchParams.append(key, value));
+    const targetUrl = new URL(`${prefix}${rest}`);
+    targetUrl.search = url.search;
+
+    // Clone the request to avoid mutating the original request object.
+    const clonedRequest = request.clone();
 
     try {
-      const newRequest = new Request(targetUrl, {
-        method: request.method,
-        headers: new Headers(request.headers),
-        body: request.body
-      });
+      const response = await fetch(targetUrl, clonedRequest);
+      let rData = null;
+      // handle non-streaming data
+      if (!response.ok || !response.body) {
+        rData = response.body
+      }else{
+        // handle streaming data
+        rData = new ReadableStream({
+          async start(controller) {
+            const reader = response.body.getReader();
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                controller.enqueue(value);
+              }
+              controller.close();
+            } catch (error) {
+              controller.error(error);
+            }
+          },
+          cancel() {
+            // Handle cancellation if necessary
+          }
+        });
+      }
 
-      const response = await fetch(newRequest);
-      const modifiedResponse = new Response(response.body, response);
-      ['Access-Control-Allow-Origin', 'Access-Control-Allow-Methods', 'Access-Control-Allow-Headers'].forEach(header => modifiedResponse.headers.set(header, '*'));
-      return modifiedResponse;
+      return new Response(rData, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: { ...Object.fromEntries(response.headers), ...corsHeaders }
+      });
     } catch (error) {
-      console.error('Failed to fetch:', error);
-      return new Response('Internal Server Error', { status: 500 });
+      return new Response('Internal Server Error', { status: 500, headers: corsHeaders });
     }
   }
-  return new Response('Not Found', { status: 404 });
+
+  // Handle unknown route
+  return new Response('Not Found', { status: 404, headers: corsHeaders });
 }
 
-function extractPrefixAndRest(pathname, prefixes) {
-  for (const prefix of prefixes) {
-    if (pathname.startsWith(prefix)) {
-      return [prefix, pathname.slice(prefix.length)];
-    }
+// Parse API information from pathname
+function getApiInfo(pathname, apis) {
+  for (const [prefix, baseUrl] of apis) {
+      if (pathname.startsWith(prefix)) {
+          return [baseUrl, pathname.slice(prefix.length)];
+      }
   }
   return [null, null];
 }
