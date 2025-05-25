@@ -1,4 +1,25 @@
-.vercel
-.wrangler
+# Local environment variables - DO NOT COMMIT ACTUAL SECRETS
+.env
+.env.local
+.env.*.local
+.dev.vars
+
+# Node.js
 node_modules/
-package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts
+dist/
+build/
+.vercel/
+.netlify/
+.wrangler/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Other
+public/
